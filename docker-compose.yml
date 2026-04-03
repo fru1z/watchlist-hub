@@ -1,0 +1,15 @@
+services:
+  mywatchlist-hub:
+    build: .
+    container_name: mywatchlist-hub
+    restart: unless-stopped
+    ports:
+      - "4895:4895"
+    env_file:
+      - .env
+    networks:
+      - nginx_network
+
+networks:
+  nginx_network:
+    external: true

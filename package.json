@@ -1,0 +1,21 @@
+{
+  "name": "mywatchlist-hub",
+  "version": "1.0.0",
+  "description": "Unified TMDB Watchlist with streaming availability and Jellyfin integration",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev:server": "nodemon server.js",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
