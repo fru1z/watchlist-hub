@@ -2,4 +2,4 @@
 
 docker build -t watchlist_hub .
 
-docker-compose up -d%  
+docker-compose up -d
