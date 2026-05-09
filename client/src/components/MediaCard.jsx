@@ -34,7 +34,7 @@ function JellyfinBadge() {
   )
 }
 
-export default function MediaCard({ item, providers, isInJellyfin, type }) {
+export default function MediaCard({ item, providers, isInJellyfin, type, filterEnabled, selectedPlatforms }) {
   const [imgError, setImgError] = useState(false)
 
   const title = item.title || item.name || 'Sin título'
@@ -46,9 +46,12 @@ export default function MediaCard({ item, providers, isInJellyfin, type }) {
   // Merge flatrate + free, deduplicate by provider_id
   const flatrate = providers?.flatrate || []
   const free = providers?.free || []
-  const allProviders = [...flatrate, ...free].filter(
+  const merged = [...flatrate, ...free].filter(
     (p, i, arr) => arr.findIndex(x => x.provider_id === p.provider_id) === i
   )
+  const allProviders = filterEnabled && selectedPlatforms?.length > 0
+    ? merged.filter(p => selectedPlatforms.includes(p.provider_id))
+    : merged
 
   const tmdbUrl = `https://www.themoviedb.org/${type}/${item.id}`
 

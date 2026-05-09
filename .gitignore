@@ -1,1 +1,19 @@
+# Dependencias
+node_modules/
+client/node_modules/
+
+# Build
+client/dist/
+
+# Entorno y secretos
 .env
+
+# Datos persistentes (tokens TMDB)
+data/
+
+# Logs y misc
+*.log
+.DS_Store
+
+# Package-lock
+package-lock.json

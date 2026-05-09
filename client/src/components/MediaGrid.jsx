@@ -86,6 +86,8 @@ export default function MediaGrid({
           providers={providersMap[providerKeyOf(item)]}
           isInJellyfin={!!jellyfinMap[String(item.id)]}
           type={mediaTypeOf(item)}
+          filterEnabled={filterEnabled}
+          selectedPlatforms={selectedPlatforms}
         />
       ))}
     </div>

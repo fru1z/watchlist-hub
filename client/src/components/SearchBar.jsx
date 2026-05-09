@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 
-export default function SearchBar({ onResults }) {
+export default function SearchBar({ onResults, profileId }) {
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const debounceRef = useRef(null)
@@ -19,7 +19,8 @@ export default function SearchBar({ onResults }) {
     setLoading(true)
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/search?query=${encodeURIComponent(value.trim())}`)
+        const profile = profileId ? `&profile=${profileId}` : ''
+        const res = await fetch(`/api/search?query=${encodeURIComponent(value.trim())}${profile}`)
         const data = await res.json()
         onResults(data.results || [])
       } catch (err) {
