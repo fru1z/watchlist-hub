@@ -1,9 +1,11 @@
 services:
-  watchlist-hub:
-    container_name: watchlist-hub
+  watchlist_hub:
+    container_name: watchlist_hub
     image: watchlist_hub:latest
-    restart: unless-stopped
+    restart: no
     ports:
       - "4895:4895"
     env_file:
       - .env
+    volumes:
+      - ./data:/app/data

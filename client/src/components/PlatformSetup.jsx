@@ -33,7 +33,7 @@ const ProviderButton = memo(function ProviderButton({ provider, isSelected, onTo
   )
 })
 
-export default function PlatformSetup({ onSave, onSkip, initialPlatforms }) {
+export default function PlatformSetup({ onSave, onSkip, initialPlatforms, profileId }) {
   const [providers, setProviders] = useState([])
   const [selected, setSelected] = useState(
     () => new Set(initialPlatforms?.length > 0 ? initialPlatforms : DEFAULT_PLATFORMS)
@@ -41,7 +41,8 @@ export default function PlatformSetup({ onSave, onSkip, initialPlatforms }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/providers/list')
+    const q = profileId ? `?profile=${profileId}` : ''
+    fetch(`/api/providers/list${q}`)
       .then(r => r.json())
       .then(data => {
         const sorted = [...data].sort((a, b) => {

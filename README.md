@@ -1,22 +1,32 @@
 # MyWatchlist Hub
 
-Interfaz unificada que combina tu Watchlist de TMDB con la disponibilidad en plataformas de streaming (España) y tu biblioteca local de Jellyfin.
+Interfaz unificada que combina tu Watchlist de TMDB con la disponibilidad en plataformas de streaming (España) y tu biblioteca local de Jellyfin. Soporta múltiples perfiles para que lo pueda usar más de una persona.
 
 ![Stack](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
 ![Stack](https://img.shields.io/badge/Node-Express-339933?logo=node.js&logoColor=white)
 ![Stack](https://img.shields.io/badge/Tailwind-3-06B6D4?logo=tailwindcss&logoColor=white)
 ![Stack](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
 
+## Acceso
+
+Accesible únicamente desde la red local o a través de la **VPN WireGuard**. No está expuesto a internet.
+
+- **URL interna:** `http://watchlist-hub.niina.es` (resuelto via Pi-hole, proxy via Nginx)
+- **Puerto directo:** `http://<ip-servidor>:4895`
+
 ---
 
 ## Características
 
-- **Watchlist de TMDB** — carga automática de todas las páginas de películas y series
+- **Múltiples perfiles** — cada usuario gestiona su propia cuenta de TMDB desde la interfaz, sin tocar el servidor
+- **Watchlist de TMDB** — carga automática de todas las páginas de películas y series por perfil
+- **Listas de TMDB** — añade cualquier lista pública o privada como fuente adicional con sus propias pestañas
 - **Disponibilidad en streaming** — iconos de plataformas de España (Netflix, Disney+, Max, Prime…) via JustWatch/TMDB
-- **Integración Jellyfin** — detecta qué títulos tienes en local comparando el `ProviderIds.Tmdb`
-- **Filtro por suscripciones** — muestra solo lo disponible en tus plataformas contratadas
+- **Filtro por suscripciones** — muestra solo lo disponible en tus plataformas; con el filtro activo las tarjetas solo muestran tus plataformas contratadas
+- **Integración Jellyfin** — detecta qué títulos tienes en local comparando el `ProviderIds.Tmdb`; los títulos locales siempre se muestran
 - **Buscador** — búsqueda multi con debounce sobre el catálogo completo de TMDB
-- **Caché en memoria** — evita peticiones repetidas a TMDB y Jellyfin
+- **Caché en memoria** — evita peticiones repetidas; scoped por perfil en watchlists y listas
+- **Persistencia de perfiles** — `profiles.json` montado como volumen Docker; las preferencias de plataformas y listas se guardan en `localStorage` del navegador
 - **Diseño oscuro** — estilo Netflix/JustWatch, responsive desde móvil
 
 ---
@@ -37,12 +47,12 @@ Interfaz unificada que combina tu Watchlist de TMDB con la disponibilidad en pla
 cp .env.example .env
 ```
 
-Edita `.env` con tus credenciales (ver sección [Variables de entorno](#variables-de-entorno)).
+Edita `.env` con las credenciales del primer perfil (ver sección [Variables de entorno](#variables-de-entorno)).
 
-### 2. Crear la red externa de Docker (si no existe)
+### 2. Crear directorio de datos persistentes
 
 ```bash
-docker network create nginx_network
+mkdir -p data
 ```
 
 ### 3. Construir y arrancar
@@ -53,24 +63,28 @@ docker compose up -d --build
 
 La app queda disponible en `http://localhost:4895`.
 
+> En el primer arranque, si `TMDB_READ_ACCESS_TOKEN` está definido en `.env`, se crea automáticamente un perfil **"Principal"**. Los siguientes perfiles se añaden desde la propia interfaz.
+
 ---
 
 ## Variables de entorno
 
+Estas variables configuran el **primer perfil** (seed) y la integración con Jellyfin, que es compartida por todos los perfiles.
+
 | Variable | Obligatoria | Descripción |
 |---|---|---|
-| `TMDB_READ_ACCESS_TOKEN` | Sí* | API Read Access Token (JWT). Obtenlo en [tmdb.org/settings/api](https://www.themoviedb.org/settings/api) |
+| `TMDB_READ_ACCESS_TOKEN` | Sí* | API Read Access Token (JWT). Primer perfil. Ver [cómo obtenerlo](#cómo-obtener-el-read-access-token-de-tmdb) |
 | `TMDB_API_KEY` | Sí* | API Key clásica v3. Alternativa al token anterior |
-| `TMDB_SESSION_ID` | Si usas `TMDB_API_KEY` | Session ID de tu cuenta TMDB |
-| `TMDB_ACCOUNT_ID` | No | ID numérico de tu cuenta. Se detecta automáticamente con el token |
-| `JELLYFIN_URL` | No | URL de tu servidor Jellyfin, ej: `http://192.168.1.100:8096` |
+| `TMDB_SESSION_ID` | Si usas `TMDB_API_KEY` | Session ID de la cuenta TMDB |
+| `TMDB_ACCOUNT_ID` | No | ID numérico de cuenta. Se detecta automáticamente con el token |
+| `JELLYFIN_URL` | No | URL del servidor Jellyfin, ej: `http://192.168.1.100:8096` |
 | `JELLYFIN_API_KEY` | No | API Key de Jellyfin (Dashboard → Claves de API) |
 | `JELLYFIN_USER_ID` | No | ID de usuario de Jellyfin. Si se omite, se usa el primer usuario |
 | `PORT` | No | Puerto del servidor. Por defecto `4895` |
 
-> **\* Autenticación TMDB:** usa `TMDB_READ_ACCESS_TOKEN` (recomendado, no necesita session_id ni account_id manual) **o** la combinación `TMDB_API_KEY` + `TMDB_SESSION_ID`.
+> **\* Autenticación TMDB:** usa `TMDB_READ_ACCESS_TOKEN` (recomendado) **o** la combinación `TMDB_API_KEY` + `TMDB_SESSION_ID`. Los perfiles adicionales se configuran exclusivamente desde la interfaz.
 
-### Cómo obtener el API Read Access Token de TMDB
+### Cómo obtener el Read Access Token de TMDB
 
 1. Accede a [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api)
 2. En la sección **API Read Access Token** copia el token JWT (empieza por `eyJ…`)
@@ -80,20 +94,48 @@ La app queda disponible en `http://localhost:4895`.
 
 ## Uso
 
-### Primer acceso
+### Perfiles
 
-Al abrir la app por primera vez aparece un modal para seleccionar tus plataformas de streaming contratadas en España. La selección se guarda en `localStorage` del navegador.
+Cada persona tiene su propio perfil con su cuenta de TMDB. Los perfiles se gestionan desde el avatar en la esquina superior derecha del header.
 
-### Filtrado
+- **Añadir perfil:** nombre + TMDB Read Access Token. El token se valida contra la API antes de guardarse; nunca se envía al navegador.
+- **Cambiar de perfil:** botón "Usar" en el listado de perfiles. Los datos (watchlist, listas, plataformas) cambian automáticamente.
+- **Eliminar perfil:** icono de papelera. No se puede eliminar el único perfil existente.
 
-El botón **Filtrar** del header activa/desactiva el filtrado por plataformas. Cuando está activo:
+Los perfiles se almacenan en `data/profiles.json`, montado como volumen Docker para persistir entre reinicios.
+
+### Listas de TMDB
+
+Además de la Watchlist personal, puedes añadir cualquier lista de TMDB (pública o privada) como fuente adicional. Se accede desde el icono de lista en el header.
+
+- Introduce el **ID numérico** o la **URL completa** de la lista (ej: `https://www.themoviedb.org/list/8311706`)
+- Se muestra una previsualización antes de confirmar
+- Cada lista añade dos pestañas propias: **Películas** y **Series**
+- Las listas son por perfil y se guardan en el `localStorage` del navegador
+
+### Pestañas
+
+| Pestaña | Contenido |
+|---|---|
+| Watchlist — Películas | Películas de tu watchlist de TMDB |
+| Watchlist — Series | Series de tu watchlist de TMDB |
+| [Nombre lista] — Películas | Películas de una lista añadida |
+| [Nombre lista] — Series | Series de una lista añadida |
+
+### Filtrado por plataformas
+
+El botón **Filtrar** del header activa el filtrado por suscripciones. Cuando está activo:
+
 - Solo se muestran títulos disponibles en tus plataformas seleccionadas
-- Los títulos presentes en Jellyfin siempre se muestran independientemente
+- Las tarjetas solo muestran los logos de **tus** plataformas (no todas las disponibles)
+- Los títulos presentes en Jellyfin se muestran siempre
 - El contador de las pestañas refleja los títulos visibles, no el total
+
+Las plataformas seleccionadas son **por perfil** y se guardan en `localStorage`.
 
 ### Actualizar datos
 
-El botón de recarga (↺) del header limpia la caché del servidor y recarga todos los datos desde TMDB y Jellyfin.
+El botón ↺ del header limpia la caché del servidor (scoped al perfil activo) y recarga todos los datos desde TMDB y Jellyfin.
 
 ### Desarrollo local (sin Docker)
 
@@ -116,36 +158,56 @@ npm run dev:client
 ```
 ┌─────────────────────────────────────────────────┐
 │                   Navegador                     │
-│            React + Tailwind CSS                 │
+│     React 18 + Tailwind CSS                     │
+│  localStorage: plataformas, listas, perfil      │
 └────────────────────┬────────────────────────────┘
-                     │ /api/*
+                     │ /api/*?profile=<id>
 ┌────────────────────▼────────────────────────────┐
 │            Express API Gateway                  │
 │              (server.js :4895)                  │
 │                                                 │
-│  • Caché en memoria (30 min watchlist)          │
+│  • Perfiles → data/profiles.json (volumen)      │
+│  • Caché en memoria scoped por perfil           │
 │  • Paginación automática TMDB                   │
 │  • Batch de providers (20 req concurrentes)     │
 └──────────┬──────────────────────┬───────────────┘
            │                      │
 ┌──────────▼──────────┐  ┌───────▼───────────────┐
 │     TMDB API v3     │  │   Jellyfin API        │
-│  Watchlist + JustW. │  │  /Users/{id}/Items    │
+│  Watchlist · Listas │  │  /Users/{id}/Items    │
+│  Providers · Search │  │  (compartido)         │
 └─────────────────────┘  └───────────────────────┘
 ```
 
+### Seguridad de credenciales
+
+Los tokens TMDB se almacenan únicamente en `data/profiles.json` en el servidor. Los endpoints `GET /api/profiles` nunca devuelven tokens al cliente. Al crear un perfil, el token se valida contra `/account` de TMDB antes de persistirse.
+
 ### Match Jellyfin ↔ TMDB
 
-Jellyfin devuelve `ProviderIds.Tmdb` en cada elemento de la biblioteca. El servidor construye un mapa `{ tmdbId → item }` y lo compara directamente con el ID de cada entrada de la Watchlist de TMDB. No hay búsqueda por título, por lo que el match es exacto y no genera falsos positivos.
+Jellyfin devuelve `ProviderIds.Tmdb` en cada elemento. El servidor construye un mapa `{ tmdbId → item }` y lo compara directamente con los IDs de TMDB. El match es exacto, no hay búsqueda por título.
 
 ### Caché
 
-| Recurso | TTL |
+| Recurso | TTL | Scope |
+|---|---|---|
+| Watchlist (películas y series) | 30 min | Por perfil |
+| Listas de TMDB | 30 min | Por perfil |
+| Providers por título | 6 horas | Global |
+| Lista de plataformas (España) | 24 horas | Global |
+| Biblioteca Jellyfin | 10 min | Global |
+
+---
+
+## Persistencia de datos
+
+| Dato | Dónde se guarda |
 |---|---|
-| Watchlist (películas y series) | 30 minutos |
-| Providers por título | 6 horas |
-| Lista de plataformas (España) | 24 horas |
-| Biblioteca Jellyfin | 10 minutos |
+| Perfiles y tokens TMDB | `data/profiles.json` (servidor, volumen Docker) |
+| Plataformas seleccionadas | `localStorage` del navegador (por perfil) |
+| Listas añadidas | `localStorage` del navegador (por perfil) |
+| Perfil activo | `localStorage` del navegador |
+| Filtro activado/desactivado | `localStorage` del navegador (por perfil) |
 
 ---
 
@@ -169,22 +231,26 @@ location /watchlist/ {
 ## Estructura del proyecto
 
 ```
-watchlist/
+watchlist-hub/
 ├── server.js               # API Gateway (Express)
 ├── package.json
 ├── Dockerfile              # Multistage: build React → servidor Node
-├── docker-compose.yml
+├── docker-compose.yml      # Volumen ./data:/app/data para persistencia
 ├── .env.example
 ├── nginx-location.conf
+├── data/                   # Volumen Docker — no subir a git
+│   └── profiles.json       # Perfiles y tokens (generado en runtime)
 └── client/
     ├── src/
-    │   ├── App.jsx         # Componente principal y estado global
+    │   ├── App.jsx                       # Estado global y lógica de perfiles
     │   ├── index.css
     │   └── components/
-    │       ├── PlatformSetup.jsx  # Modal de selección de plataformas
-    │       ├── SearchBar.jsx      # Búsqueda con debounce
-    │       ├── MediaCard.jsx      # Tarjeta de película/serie
-    │       └── MediaGrid.jsx      # Grid con skeleton y filtrado
+    │       ├── ProfileManager.jsx        # Modal de gestión de perfiles
+    │       ├── ListManager.jsx           # Modal de gestión de listas TMDB
+    │       ├── PlatformSetup.jsx         # Modal de selección de plataformas
+    │       ├── SearchBar.jsx             # Búsqueda con debounce
+    │       ├── MediaCard.jsx             # Tarjeta de película/serie
+    │       └── MediaGrid.jsx             # Grid con skeleton y filtrado
     ├── vite.config.js
     ├── tailwind.config.js
     └── package.json
