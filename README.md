@@ -7,13 +7,6 @@ Interfaz unificada que combina tu Watchlist de TMDB con la disponibilidad en pla
 ![Stack](https://img.shields.io/badge/Tailwind-3-06B6D4?logo=tailwindcss&logoColor=white)
 ![Stack](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
 
-## Acceso
-
-Accesible únicamente desde la red local o a través de la **VPN WireGuard**. No está expuesto a internet.
-
-- **URL interna:** `http://watchlist-hub.niina.es` (resuelto via Pi-hole, proxy via Nginx)
-- **Puerto directo:** `http://<ip-servidor>:4895`
-
 ---
 
 ## Características
@@ -209,49 +202,5 @@ Jellyfin devuelve `ProviderIds.Tmdb` en cada elemento. El servidor construye un 
 | Perfil activo | `localStorage` del navegador |
 | Filtro activado/desactivado | `localStorage` del navegador (por perfil) |
 
----
 
-## Nginx
 
-Pega el bloque del archivo `nginx-location.conf` dentro de tu `server {}`:
-
-```nginx
-location /watchlist/ {
-    proxy_pass         http://mywatchlist-hub:4895/;
-    proxy_http_version 1.1;
-    proxy_set_header   Host              $host;
-    proxy_set_header   X-Real-IP         $remote_addr;
-    proxy_set_header   X-Forwarded-Proto $scheme;
-    proxy_read_timeout 60s;
-}
-```
-
----
-
-## Estructura del proyecto
-
-```
-watchlist-hub/
-├── server.js               # API Gateway (Express)
-├── package.json
-├── Dockerfile              # Multistage: build React → servidor Node
-├── docker-compose.yml      # Volumen ./data:/app/data para persistencia
-├── .env.example
-├── nginx-location.conf
-├── data/                   # Volumen Docker — no subir a git
-│   └── profiles.json       # Perfiles y tokens (generado en runtime)
-└── client/
-    ├── src/
-    │   ├── App.jsx                       # Estado global y lógica de perfiles
-    │   ├── index.css
-    │   └── components/
-    │       ├── ProfileManager.jsx        # Modal de gestión de perfiles
-    │       ├── ListManager.jsx           # Modal de gestión de listas TMDB
-    │       ├── PlatformSetup.jsx         # Modal de selección de plataformas
-    │       ├── SearchBar.jsx             # Búsqueda con debounce
-    │       ├── MediaCard.jsx             # Tarjeta de película/serie
-    │       └── MediaGrid.jsx             # Grid con skeleton y filtrado
-    ├── vite.config.js
-    ├── tailwind.config.js
-    └── package.json
-```
