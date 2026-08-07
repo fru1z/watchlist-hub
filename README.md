@@ -51,7 +51,9 @@ mkdir -p data
 ### 3. Construir y arrancar
 
 ```bash
-docker compose up -d --build
+npm install --package-lock-only && cd client && npm install --package-lock-only
+
+sh build-and-run.sh
 ```
 
 La app queda disponible en `http://localhost:4895`.
